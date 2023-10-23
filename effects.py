@@ -64,24 +64,16 @@ def get_surface_effect_thumbnails(self, context):
 
     #print("Scanning directory %s" % directory)
     if directory and os.path.exists(directory):
-        # Scan directory for jpg files
-        image_paths = []
-        for fn in alistdir(directory):
-            if fn.lower().endswith(".jpg"):
-                image_paths.append(fn)
-        
+        image_paths = [fn for fn in alistdir(directory) if fn.lower().endswith(".jpg")]
         for i, name in enumerate(image_paths):
             # Generate a thumbnail preview for a file.
             filepath = os.path.join(directory, name)
             icon = pcoll.get(name)
-            if not icon:
-                thumb = pcoll.load(name, filepath, 'IMAGE')
-            else:
-                thumb = pcoll[name]
+            thumb = pcoll.load(name, filepath, 'IMAGE') if not icon else pcoll[name]
             trimname = name.split('.')
             #enum_items.append((name, name, "", thumb.icon_id, i))
             enum_items.append((trimname[0], trimname[0], "", thumb.icon_id, i))
-    
+
     pcoll.surface_effects = enum_items
     pcoll.surface_effects_dir = directory
     return pcoll.surface_effects
@@ -96,12 +88,19 @@ class BYGEN_OT_surface_effect_import(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
         wm = context.window_manager
-            
+
         # Beginning procedure:
         objs = selected_objects()
 
         # Getting all useful directories for obtaining data (objects, node trees, etc.) from the content packs.
-        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_se, wm.content_packs_se+'.blend'))
+        directory = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                'content_packs',
+                wm.content_packs_se,
+                f'{wm.content_packs_se}.blend',
+            )
+        )
         colpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_se, wm.content_packs_se+'.blend\\Collection\\'))
         colname = wm.surface_effects
         treepath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_se, wm.content_packs_se+'.blend\\NodeTree\\'))
@@ -119,21 +118,21 @@ class BYGEN_OT_surface_effect_import(bpy.types.Operator):
                 '''
                 for o in objs:
 
-                        # Import geo tree from content pack
-                        bpy.ops.wm.append(filename = treename, directory = treepath)
+                    # Import geo tree from content pack
+                    bpy.ops.wm.append(filename = treename, directory = treepath)
 
-                        # Get the imported tree by name (store in surface_tree)
-                        surface_tree = bpy.data.node_groups[treename]
+                    # Get the imported tree by name (store in surface_tree)
+                    surface_tree = bpy.data.node_groups[treename]
 
-                        # Add geonodes modifier to object (store in geomod)
-                        geomod = o.modifiers.new("Geometry Nodes", "NODES")
+                    # Add geonodes modifier to object (store in geomod)
+                    geomod = o.modifiers.new("Geometry Nodes", "NODES")
 
-                        # Assign new surface_effect geonode tree to new geomod
-                        geomod.node_group = surface_tree
+                    # Assign new surface_effect geonode tree to new geomod
+                    geomod.node_group = surface_tree
 
-                        # Change surface_tree name to 'objname_treename_randID'
-                        randID = random.randint(1,9999)
-                        surface_tree.name = o.name+"_"+treename+"_"+str(randID)
+                    # Change surface_tree name to 'objname_treename_randID'
+                    randID = random.randint(1,9999)
+                    surface_tree.name = f"{o.name}_{treename}_{randID}"
 
             else:
                 '''
@@ -146,26 +145,14 @@ class BYGEN_OT_surface_effect_import(bpy.types.Operator):
                 col = None
 
                 # If the user wants to create a unique collection.
-                if bytool.se_unique_collection: 
-                    # Append collection to file (store ref in col) <- (optional: link)
+                if (
+                    not bytool.se_unique_collection
+                    and not collection_exists(wm.surface_effects)
+                    or bytool.se_unique_collection
+                ):
+                    # Let's create the collection.
                     bpy.ops.wm.append(filename = colname, directory = colpath)
-                    col = get_collection(wm.surface_effects)
-
-                # Else: The user does not want to create a unique collection.
-                else:
-
-                    # If the collection already exists in the blend file.
-                    if collection_exists(wm.surface_effects):
-                        # Let's grab the collection.
-                        col = get_collection(wm.surface_effects)
-
-                    # Else: The collection does not already exist in the blend file.
-                    else:
-                        # Let's create the collection.
-                        bpy.ops.wm.append(filename = colname, directory = colpath)
-                        col = get_collection(wm.surface_effects)
-                    
-                if col:
+                if col := get_collection(wm.surface_effects):
                     for o in objs:
 
                         # Import geo tree from content pack
@@ -182,7 +169,7 @@ class BYGEN_OT_surface_effect_import(bpy.types.Operator):
 
                         # Change surface_tree name to 'objname_treename_randID'
                         randID = random.randint(1,9999)
-                        surface_tree.name = o.name+"_"+treename+"_"+str(randID)
+                        surface_tree.name = f"{o.name}_{treename}_{randID}"
 
                         # Open surface tree nodes
                         nodes = surface_tree.nodes
@@ -191,7 +178,7 @@ class BYGEN_OT_surface_effect_import(bpy.types.Operator):
                         colinfo = get_node(nodes, "Collection Info")
                         colinfo.inputs[0].default_value = col
         else:
-            print(wm.content_packs_se + " - pack file does not exist.")
+            print(f"{wm.content_packs_se} - pack file does not exist.")
         return {'FINISHED'}
 class BYGEN_OT_surface_effect_weight_paint(bpy.types.Operator):
     bl_idname = "object.bygen_surface_effect_weight_paint"
@@ -204,12 +191,19 @@ class BYGEN_OT_surface_effect_weight_paint(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
         wm = context.window_manager
-            
+
         # Beginning procedure:
         o = ao()
 
         # Getting all useful directories for obtaining data (objects, node trees, etc.) from the content packs.
-        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_se, wm.content_packs_se+'.blend'))
+        directory = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                'content_packs',
+                wm.content_packs_se,
+                f'{wm.content_packs_se}.blend',
+            )
+        )
         colpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_se, wm.content_packs_se+'.blend\\Collection\\'))
         colname = wm.surface_effects
         treepath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_se, wm.content_packs_se+'.blend\\NodeTree\\'))
@@ -252,17 +246,17 @@ class BYGEN_OT_surface_effect_weight_paint(bpy.types.Operator):
                     if o.name.lower() == "weight":
                         id = o.identifier
                 id_prop_path = "[\""+id+"_use_attribute\"]"
-                id_prop_name = id+"_attribute_name"
+                id_prop_name = f"{id}_attribute_name"
                 bpy.ops.object.geometry_nodes_input_attribute_toggle(prop_path=id_prop_path, modifier_name=geomod.name)
                 geomod[id_prop_name] = group.name
 
                 # Change surface_tree name to 'objname_treename_randID'
                 randID = random.randint(1,9999)
-                surface_tree.name = o.name+"_"+treename+"_"+str(randID)
+                surface_tree.name = f"{o.name}_{treename}_{randID}"
 
                 # Set mode to weight paint
                 bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
-                
+
             else:
                 '''
                 This is not an (S) type effect, meaning there is a collection to import.
@@ -275,27 +269,14 @@ class BYGEN_OT_surface_effect_weight_paint(bpy.types.Operator):
                 col = None
 
                 # If the user wants to create a unique collection.
-                if bytool.se_unique_collection:
-                    # Append collection to file (store ref in col) <- (optional: link)
+                if (
+                    not bytool.se_unique_collection
+                    and not collection_exists(wm.surface_effects)
+                    or bytool.se_unique_collection
+                ):
+                    # Let's create the collection.
                     bpy.ops.wm.append(filename = colname, directory = colpath)
-                    col = get_collection(wm.surface_effects)
-
-                # Else: The user does not want to create a unique collection.
-                else:
-
-                    # If the collection already exists in the blend file.
-                    if collection_exists(wm.surface_effects):
-                        # Let's grab the collection.
-                        col = get_collection(wm.surface_effects)
-
-                    # Else: The collection does not already exist in the blend file.
-                    else:
-                        # Let's create the collection.
-                        bpy.ops.wm.append(filename = colname, directory = colpath)
-                        col = get_collection(wm.surface_effects)
-                    
-
-                if col:
+                if col := get_collection(wm.surface_effects):
                     # Import geo tree from content pack
                     bpy.ops.wm.append(filename = treename, directory = treepath)
 
@@ -324,13 +305,13 @@ class BYGEN_OT_surface_effect_weight_paint(bpy.types.Operator):
                         if o.name.lower() == "weight":
                             id = o.identifier
                     id_prop_path = "[\""+id+"_use_attribute\"]"
-                    id_prop_name = id+"_attribute_name"
+                    id_prop_name = f"{id}_attribute_name"
                     bpy.ops.object.geometry_nodes_input_attribute_toggle(prop_path=id_prop_path, modifier_name=geomod.name)
                     geomod[id_prop_name] = group.name
 
                     # Change surface_tree name to 'objname_treename_randID'
                     randID = random.randint(1,9999)
-                    surface_tree.name = o.name+"_"+treename+"_"+str(randID)
+                    surface_tree.name = f"{o.name}_{treename}_{randID}"
 
                     # Put col in correct node (collection info node)
                     colinfo = get_node(nodes, "Collection Info")
@@ -339,7 +320,7 @@ class BYGEN_OT_surface_effect_weight_paint(bpy.types.Operator):
                     # Set mode to weight paint
                     bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
         else:
-            print(wm.content_packs_se + " - pack file does not exist.")
+            print(f"{wm.content_packs_se} - pack file does not exist.")
         return {'FINISHED'}   
 class BYGEN_OT_refresh_effect_properties(bpy.types.Operator):
     bl_idname = "object.bygen_refresh_effect_properties"
@@ -553,20 +534,12 @@ def get_mesh_parametric_thumbnails(self, context):
         return pcoll.mesh_parametric_effects
 
     if directory and os.path.exists(directory):
-        # Scan directory for jpg files
-        image_paths = []
-        for fn in alistdir(directory):
-            if fn.lower().endswith(".jpg"):
-                image_paths.append(fn)
-        
+        image_paths = [fn for fn in alistdir(directory) if fn.lower().endswith(".jpg")]
         for i, name in enumerate(image_paths):
             # Generate a thumbnail preview for a file.
             filepath = os.path.join(directory, name)
             icon = pcoll.get(name)
-            if not icon:
-                thumb = pcoll.load(name, filepath, 'IMAGE')
-            else:
-                thumb = pcoll[name]
+            thumb = pcoll.load(name, filepath, 'IMAGE') if not icon else pcoll[name]
             trimname = name.split('.')
             enum_items.append((trimname[0], trimname[0], "", thumb.icon_id, i))
 
@@ -584,12 +557,19 @@ class BYGEN_OT_mesh_parametric_import(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
         wm = context.window_manager
-            
+
         # Beginning procedure:
-        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_mp, wm.content_packs_mp+'.blend'))
+        directory = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                'content_packs',
+                wm.content_packs_mp,
+                f'{wm.content_packs_mp}.blend',
+            )
+        )
         objpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_mp, wm.content_packs_mp+'.blend\\Object\\'))
         objname = wm.mesh_parametric_effects
-        
+
         if directory and os.path.exists(directory):
             if wm.mesh_parametric_effects.startswith("(G)"):
                 # Complex geo nodes stacks which require extra base referencing
@@ -645,21 +625,19 @@ class BYGEN_OT_mesh_parametric_import(bpy.types.Operator):
                 #hide(base)
                 hide_in_viewport(base)
                 hide_in_render(base)
-                delete_object(template)
-
             else:
                 # Append template object
                 base = ao()
                 ret = bpy.ops.wm.append(filename = objname, directory = objpath)
                 template = bpy.context.selected_objects[-1]
-                
+
                 # Select the object with moodifier stack.
                 select_only(base)
                 select_object(template) # <- Active selection
-                
+
                 # Copy over modifiers from template.
                 bpy.ops.object.make_links_data(type='MODIFIERS')
-                
+
                 # Set active back to base
                 select_only(base)
 
@@ -683,7 +661,7 @@ class BYGEN_OT_mesh_parametric_import(bpy.types.Operator):
                             if o.name.lower() == "object":
                                 id = o.identifier #Input_3 for example
                         m[id] = base
-                        
+
                         # For some reason this hack workaround is needed because
                         # bpy.context.view_layer.update() doesn't work.
                         hide_in_viewport(base)
@@ -691,11 +669,10 @@ class BYGEN_OT_mesh_parametric_import(bpy.types.Operator):
 
                     if m.type == "SKIN":
                         bpy.ops.mesh.customdata_skin_add()
-                # Clean up by deleting template
-                delete_object(template)
+            delete_object(template)
 
         else:
-            print(wm.content_packs_mp + " - pack file does not exist.")
+            print(f"{wm.content_packs_mp} - pack file does not exist.")
         return {'FINISHED'}
 class BYGEN_OT_mesh_parametric_import_template(bpy.types.Operator):
     bl_idname = "object.bygen_mesh_parametric_import_template"
@@ -708,12 +685,19 @@ class BYGEN_OT_mesh_parametric_import_template(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
         wm = context.window_manager
-            
+
         # Beginning procedure:
-        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_mp, wm.content_packs_mp+'.blend'))
+        directory = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                'content_packs',
+                wm.content_packs_mp,
+                f'{wm.content_packs_mp}.blend',
+            )
+        )
         objpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_mp, wm.content_packs_mp+'.blend\\Object\\'))
         objname = wm.mesh_parametric_effects
-        
+
         if directory and os.path.exists(directory):
             if wm.mesh_parametric_effects.startswith("(G)"):
                 '''
@@ -724,27 +708,21 @@ class BYGEN_OT_mesh_parametric_import_template(bpy.types.Operator):
                 '''
 
                 # Updating the filename to find the complex template.
-                objname = wm.mesh_parametric_effects + " Template"
+                objname = f"{wm.mesh_parametric_effects} Template"
 
-                # Duplicating the appending code in case we need to handle the importing
-                # of complex templates slightly differently in the future.
-                ret = bpy.ops.wm.append(filename = objname, directory = objpath)
-                template = bpy.context.selected_objects[-1]
-                for m in template.modifiers:
-                    if m.type=='SUBSURF':
-                        m.show_viewport = True
-                        m.show_render = True
             else:
                 '''
                 Since this is not a complex (G) effect, we will just be importing the object
                 that contains the modifier stack which constructs the effect.
                 '''
-                ret = bpy.ops.wm.append(filename = objname, directory = objpath)
-                template = bpy.context.selected_objects[-1]
-                for m in template.modifiers:
-                    if m.type=='SUBSURF':
-                        m.show_viewport = True
-                        m.show_render = True
+            # Duplicating the appending code in case we need to handle the importing
+            # of complex templates slightly differently in the future.
+            ret = bpy.ops.wm.append(filename = objname, directory = objpath)
+            template = bpy.context.selected_objects[-1]
+            for m in template.modifiers:
+                if m.type=='SUBSURF':
+                    m.show_viewport = True
+                    m.show_render = True
         return {'FINISHED'}
 class BYGEN_PT_MeshParametric(Panel):
     bl_idname = "BYGEN_PT_MeshParametric"
@@ -818,20 +796,12 @@ def get_mesh_structural_thumbnails(self, context):
         return pcoll.mesh_structural_effects
 
     if directory and os.path.exists(directory):
-        # Scan directory for jpg files
-        image_paths = []
-        for fn in alistdir(directory):
-            if fn.lower().endswith(".jpg"):
-                image_paths.append(fn)
-        
+        image_paths = [fn for fn in alistdir(directory) if fn.lower().endswith(".jpg")]
         for i, name in enumerate(image_paths):
             # Generate a thumbnail preview for a file.
             filepath = os.path.join(directory, name)
             icon = pcoll.get(name)
-            if not icon:
-                thumb = pcoll.load(name, filepath, 'IMAGE')
-            else:
-                thumb = pcoll[name]
+            thumb = pcoll.load(name, filepath, 'IMAGE') if not icon else pcoll[name]
             trimname = name.split('.')
             enum_items.append((trimname[0], trimname[0], "", thumb.icon_id, i))
 
@@ -849,17 +819,24 @@ class BYGEN_OT_mesh_structural_import(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
         wm = context.window_manager
-            
+
         # Beginning procedure:
         objs = selected_objects()
 
         # Getting all useful directories for obtaining data (objects, node trees, etc.) from the content packs.
-        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_ms, wm.content_packs_ms+'.blend'))
+        directory = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                'content_packs',
+                wm.content_packs_ms,
+                f'{wm.content_packs_ms}.blend',
+            )
+        )
         colpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_ms, wm.content_packs_ms+'.blend\\Collection\\'))
         colname = wm.mesh_structural_effects
         treepath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_ms, wm.content_packs_ms+'.blend\\NodeTree\\'))
         treename = wm.mesh_structural_effects
-        
+
         # Find blend file with same name as folder (wm.content_packs_mp+'.blend')
         if directory and os.path.exists(directory):
             for o in objs:
@@ -878,10 +855,10 @@ class BYGEN_OT_mesh_structural_import(bpy.types.Operator):
 
                 # Change surface_tree name to 'objname_treename_randID'
                 randID = random.randint(1,9999)
-                mesh_structural_tree.name = o.name+"_"+treename+"_"+str(randID)
+                mesh_structural_tree.name = f"{o.name}_{treename}_{randID}"
 
         else:
-            print(wm.content_packs_ms + " - pack file does not exist.")
+            print(f"{wm.content_packs_ms} - pack file does not exist.")
         return {'FINISHED'}
 class BYGEN_OT_mesh_structural_import_template(bpy.types.Operator):
     bl_idname = "object.bygen_mesh_structural_import_template"
@@ -894,12 +871,19 @@ class BYGEN_OT_mesh_structural_import_template(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
         wm = context.window_manager
-            
+
         # Beginning procedure:
-        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_ms, wm.content_packs_ms+'.blend'))
+        directory = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                'content_packs',
+                wm.content_packs_ms,
+                f'{wm.content_packs_ms}.blend',
+            )
+        )
         objpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_ms, wm.content_packs_ms+'.blend\\Object\\'))
         objname = wm.mesh_structural_effects
-        
+
         if directory and os.path.exists(directory):
             ret = bpy.ops.wm.append(filename = objname, directory = objpath)
             template = bpy.context.selected_objects[-1]
@@ -988,20 +972,12 @@ def get_mesh_displacement_thumbnails(self, context):
 
     #print("Scanning directory %s" % directory)
     if directory and os.path.exists(directory):
-        # Scan directory for jpg files
-        image_paths = []
-        for fn in alistdir(directory):
-            if fn.lower().endswith(".jpg"):
-                image_paths.append(fn)
-        
+        image_paths = [fn for fn in alistdir(directory) if fn.lower().endswith(".jpg")]
         for i, name in enumerate(image_paths):
             # Generate a thumbnail preview for a file.
             filepath = os.path.join(directory, name)
             icon = pcoll.get(name)
-            if not icon:
-                thumb = pcoll.load(name, filepath, 'IMAGE')
-            else:
-                thumb = pcoll[name]
+            thumb = pcoll.load(name, filepath, 'IMAGE') if not icon else pcoll[name]
             trimname = name.split('.')
             #enum_items.append((name, name, "", thumb.icon_id, i))
             enum_items.append((trimname[0], trimname[0], "", thumb.icon_id, i))
@@ -1020,11 +996,18 @@ class BYGEN_OT_mesh_displacement_import(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
         wm = context.window_manager
-            
+
         # Beginning procedure:
         objs = selected_objects()
         # Search directory content_packs os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_md))
-        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_md, wm.content_packs_md+'.blend'))
+        directory = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                'content_packs',
+                wm.content_packs_md,
+                f'{wm.content_packs_md}.blend',
+            )
+        )
         treepath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_md, wm.content_packs_md+'.blend\\NodeTree\\'))
         treename = wm.mesh_displacement_effects
         # Find blend file with same name as folder (wm.content_packs_md+'.blend')
@@ -1045,11 +1028,11 @@ class BYGEN_OT_mesh_displacement_import(bpy.types.Operator):
 
                 # Change mesh_tree name to 'objname_treename_randID'
                 randID = random.randint(1,9999)
-                mesh_tree.name = o.name+"_"+treename+"_"+str(randID)
+                mesh_tree.name = f"{o.name}_{treename}_{randID}"
 
-                # Selected object should already be the input mesh
+                        # Selected object should already be the input mesh
         else:
-            print(wm.content_packs_md + " - pack file does not exist.")
+            print(f"{wm.content_packs_md} - pack file does not exist.")
         return {'FINISHED'}
 class BYGEN_PT_Displacement(Panel):
     bl_idname = "BYGEN_PT_Displacement"
@@ -1210,20 +1193,12 @@ def get_volume_effect_thumbnails(self, context):
 
     #print("Scanning directory %s" % directory)
     if directory and os.path.exists(directory):
-        # Scan directory for jpg files
-        image_paths = []
-        for fn in alistdir(directory):
-            if fn.lower().endswith(".jpg"):
-                image_paths.append(fn)
-        
+        image_paths = [fn for fn in alistdir(directory) if fn.lower().endswith(".jpg")]
         for i, name in enumerate(image_paths):
             # Generate a thumbnail preview for a file.
             filepath = os.path.join(directory, name)
             icon = pcoll.get(name)
-            if not icon:
-                thumb = pcoll.load(name, filepath, 'IMAGE')
-            else:
-                thumb = pcoll[name]
+            thumb = pcoll.load(name, filepath, 'IMAGE') if not icon else pcoll[name]
             trimname = name.split('.')
             #enum_items.append((name, name, "", thumb.icon_id, i))
             enum_items.append((trimname[0], trimname[0], "", thumb.icon_id, i))
@@ -1242,12 +1217,19 @@ class BYGEN_OT_volume_effect_import(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
         wm = context.window_manager
-            
+
         # Beginning procedure:
         objs = selected_objects()
 
         # Getting all useful directories for obtaining data (objects, node trees, etc.) from the content packs.
-        directory = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_ve, wm.content_packs_ve+'.blend'))
+        directory = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                'content_packs',
+                wm.content_packs_ve,
+                f'{wm.content_packs_ve}.blend',
+            )
+        )
         colpath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_ve, wm.content_packs_ve+'.blend\\Collection\\'))
         colname = wm.volume_effects
         treepath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'content_packs', wm.content_packs_ve, wm.content_packs_ve+'.blend\\NodeTree\\'))
@@ -1278,7 +1260,7 @@ class BYGEN_OT_volume_effect_import(bpy.types.Operator):
 
                     # Change surface_tree name to 'objname_treename_randID'
                     randID = random.randint(1,9999)
-                    volume_tree.name = o.name+"_"+treename+"_"+str(randID)
+                    volume_tree.name = f"{o.name}_{treename}_{randID}"
 
             else:
                 '''
@@ -1291,27 +1273,14 @@ class BYGEN_OT_volume_effect_import(bpy.types.Operator):
                 col = None
 
                 # If the user wants to create a unique collection.
-                if bytool.ve_unique_collection:
-                    # Append collection to file (store ref in col) <- (optional: link)
+                if (
+                    not bytool.ve_unique_collection
+                    and not collection_exists(wm.volume_effects)
+                    or bytool.ve_unique_collection
+                ):
+                    # Let's create the collection.
                     bpy.ops.wm.append(filename = colname, directory = colpath)
-                    col = get_collection(wm.volume_effects)
-                
-                # Else: The user does not want to create a unique collection.
-                else:
-
-                    # If the collection already exists in the blend file.
-                    if collection_exists(wm.volume_effects):
-                        # Let's grab the collection.
-                        col = get_collection(wm.volume_effects)
-                    
-                    # Else: The collection does not already exist in the blend file.
-                    else:
-                        # Let's create the collection.
-                        bpy.ops.wm.append(filename = colname, directory = colpath)
-                        col = get_collection(wm.volume_effects)
-                    
-                # if col:
-                if col:
+                if col := get_collection(wm.volume_effects):
                     for o in objs:
 
                         # Import geo tree from content pack
@@ -1328,7 +1297,7 @@ class BYGEN_OT_volume_effect_import(bpy.types.Operator):
 
                         # Change surface_tree name to 'objname_treename_randID'
                         randID = random.randint(1,9999)
-                        volume_tree.name = o.name+"_"+treename+"_"+str(randID)
+                        volume_tree.name = f"{o.name}_{treename}_{randID}"
 
                         # Open surface tree nodes
                         nodes = volume_tree.nodes
@@ -1337,7 +1306,7 @@ class BYGEN_OT_volume_effect_import(bpy.types.Operator):
                         colinfo = get_node(nodes, "Collection Info")
                         colinfo.inputs[0].default_value = col
         else:
-            print(wm.content_packs_ve + " - pack file does not exist.")
+            print(f"{wm.content_packs_ve} - pack file does not exist.")
         return {'FINISHED'}
 class BYGEN_PT_VolumeEffects(Panel):
     bl_idname = "BYGEN_PT_VolumeEffects"

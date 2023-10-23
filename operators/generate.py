@@ -152,7 +152,7 @@ class BYGEN_OT_cubic_field_generate(bpy.types.Operator):
         # Setting up context
         scene = context.scene
         bytool = scene.by_tool
-        
+
         # Begin generation procedure
         # Get random seed
         random.seed(self.seed_value)
@@ -161,12 +161,11 @@ class BYGEN_OT_cubic_field_generate(bpy.types.Operator):
         created_cubes = []
 
         # For number of cubes
-        for x in range(self.number_of_cubes):
-            
+        for _ in range(self.number_of_cubes):
             # Create primitive cube
             bpy.ops.mesh.primitive_cube_add()
             sO = bpy.context.active_object
-            
+
             # Modify Cube
             # Get Old Location
             original_location = sO.location
@@ -184,16 +183,15 @@ class BYGEN_OT_cubic_field_generate(bpy.types.Operator):
             original_scale = sO.scale
             # Scale Diversion Values
             scale_x_diversion = random.uniform(self.scale_min[0], self.scale_max[0])
-            scale_y_diversion = random.uniform(self.scale_min[1], self.scale_max[1])
-            scale_z_diversion = random.uniform(self.scale_max[2], self.scale_max[2])
             new_scale = original_scale
+            new_scale[0] = new_scale[0] + scale_x_diversion
             if self.uniform_scale == True:
-                new_scale[0] = new_scale[0] + scale_x_diversion
                 new_scale[1] = new_scale[1] + scale_x_diversion
                 new_scale[2] = new_scale[2] + scale_x_diversion
             else:
-                new_scale[0] = new_scale[0] + scale_x_diversion
+                scale_y_diversion = random.uniform(self.scale_min[1], self.scale_max[1])
                 new_scale[1] = new_scale[1] + scale_y_diversion
+                scale_z_diversion = random.uniform(self.scale_max[2], self.scale_max[2])
                 new_scale[2] = new_scale[2] + scale_z_diversion
             sO.scale = new_scale
 
@@ -212,7 +210,7 @@ class BYGEN_OT_cubic_field_generate(bpy.types.Operator):
                 sO.rotation_euler = (radians(new_rot[0]), radians(new_rot[1]), radians(new_rot[2]))
 
             created_cubes.append(sO)
-            
+
         if self.join_cubes:
             for x in created_cubes:
                 # created_cubes[x].select_set(True)
@@ -341,11 +339,11 @@ class BYGEN_OT_spherical_field_generate(bpy.types.Operator):
         created_spheres = []
 
         # For number of spheres
-        for x in range(self.number_of_spheres):
+        for _ in range(self.number_of_spheres):
             # Create Sphere
             bpy.ops.mesh.primitive_uv_sphere_add()
             sO = bpy.context.active_object
-            
+
             # Modify Sphere
             # Get Old Location
             original_location = sO.location
@@ -363,16 +361,15 @@ class BYGEN_OT_spherical_field_generate(bpy.types.Operator):
             original_scale = sO.scale
             # Scale Diversion Values
             scale_x_diversion = random.uniform(self.scale_min[0], self.scale_max[0])
-            scale_y_diversion = random.uniform(self.scale_min[1], self.scale_max[1])
-            scale_z_diversion = random.uniform(self.scale_max[2], self.scale_max[2])
             new_scale = original_scale
+            new_scale[0] = new_scale[0] + scale_x_diversion
             if self.uniform_scale == True:
-                new_scale[0] = new_scale[0] + scale_x_diversion
                 new_scale[1] = new_scale[1] + scale_x_diversion
                 new_scale[2] = new_scale[2] + scale_x_diversion
             else:
-                new_scale[0] = new_scale[0] + scale_x_diversion
+                scale_y_diversion = random.uniform(self.scale_min[1], self.scale_max[1])
                 new_scale[1] = new_scale[1] + scale_y_diversion
+                scale_z_diversion = random.uniform(self.scale_max[2], self.scale_max[2])
                 new_scale[2] = new_scale[2] + scale_z_diversion
             sO.scale = new_scale
 
@@ -391,7 +388,7 @@ class BYGEN_OT_spherical_field_generate(bpy.types.Operator):
                 sO.rotation_euler = (radians(new_rot[0]), radians(new_rot[1]), radians(new_rot[2]))
 
             created_spheres.append(sO)
-            
+
         if self.join_spheres:
             for x in created_spheres:
                 # created_spheres[x].select_set(True)
@@ -486,7 +483,7 @@ class BYGEN_OT_meta_cloud_generate(bpy.types.Operator):
         part.settings.particle_size = self.particle_size
         bpy.ops.object.convert(target='MESH')
 
-        new_name = meta_name+".001"
+        new_name = f"{meta_name}.001"
         meta = bpy.data.objects[new_name]
 
         # context.view_layer.objects.active = sO
@@ -538,31 +535,14 @@ class BYGEN_OT_hard_surface_frame_add(bpy.types.Operator):
         scene = context.scene
         bytool = scene.by_tool
 
-        # Creating the mesh and object
-        verts = []
         edges = []
-        faces = []
-        verts.append([#0
-            0.0,
-            1.0,
-            0.0
-        ])
-        verts.append([#1
-            1.0,
-            1.0,
-            0.0
-        ])
-        verts.append([#2
-            1.0,
-            -1.0,
-            0.0
-        ])
-        verts.append([#3
-            0.0,
-            -1.0,
-            0.0
-        ])
-        faces.append([0,1,2,3])
+        verts = [
+            [0.0, 1.0, 0.0],  # 0
+            [1.0, 1.0, 0.0],  # 1
+            [1.0, -1.0, 0.0],  # 2
+            [0.0, -1.0, 0.0],  # 3
+        ]
+        faces = [[0, 1, 2, 3]]
         name = "New Object"
         mesh = bpy.data.meshes.new(name)
         obj = bpy.data.objects.new(name, mesh)
@@ -608,11 +588,11 @@ class BYGEN_OT_hard_surface_faceting_add(bpy.types.Operator):
             new_location = vert.co
             rand = random.uniform(-1.0,1.0)
             vert.co = vert.co+Vector((rand,rand,rand))
-        ''' 
+        '''
         # Add modifiers to created object
         # Random ID
         randID = random.randint(1,9999)
-        
+
         # Subsurf
         mod = sO.modifiers.new("Subsurface", 'SUBSURF')
         mod.levels = 4
@@ -621,7 +601,7 @@ class BYGEN_OT_hard_surface_faceting_add(bpy.types.Operator):
         # Displace with switching
         mod_displace = sO.modifiers.new("Displace", 'DISPLACE')
         mod_displace.strength = -0.1
-        tempTex = bpy.data.textures.new("ByGen_TexID_"+str(randID), 'MUSGRAVE')
+        tempTex = bpy.data.textures.new(f"ByGen_TexID_{randID}", 'MUSGRAVE')
         mod_displace.texture = tempTex
         tempTex = mod_displace.texture
 
@@ -630,7 +610,7 @@ class BYGEN_OT_hard_surface_faceting_add(bpy.types.Operator):
         mod_decimate1.decimate_type = 'COLLAPSE'
         mod_decimate1.ratio = 0.1
         # mod_decimate1.ratio = bytool.gen_decimate_collapse
-        
+
         # Decimate 2
         mod_decimate2 = sO.modifiers.new('Decimate2', 'DECIMATE')
         mod_decimate2.decimate_type = 'DISSOLVE' # COLLAPSE, UNSUBDIV, DISSOLVE (PLANAR)
@@ -641,7 +621,7 @@ class BYGEN_OT_hard_surface_faceting_add(bpy.types.Operator):
 
         # Triangulate
         mod_triangulate = sO.modifiers.new('Triangulate', 'TRIANGULATE')
-        
+
         #Edge Split
         mod_edgesplit = sO.modifiers.new('Edge Split', 'EDGE_SPLIT')
         mod_edgesplit.split_angle = 0.261799
@@ -918,14 +898,14 @@ class BYGEN_OT_midge_cell_add(bpy.types.Operator):
         # Setting up context
         scene = context.scene
         bytool = scene.by_tool
-        
+
         # Begin generation procedure
         bpy.ops.mesh.primitive_cube_add()
         sO = bpy.context.active_object
-        
+
         # Random ID
         randID = random.randint(1,9999)
-        
+
         # Adding Modifiers
         # Subsurf
         mod_subd = sO.modifiers.new('Subsurface', 'SUBSURF')
@@ -942,7 +922,7 @@ class BYGEN_OT_midge_cell_add(bpy.types.Operator):
         mod_displace.strength = 1.0
 
         # Creating texture
-        tempTex = bpy.data.textures.new("ByGen_TexID_"+str(randID), "DISTORTED_NOISE")
+        tempTex = bpy.data.textures.new(f"ByGen_TexID_{randID}", "DISTORTED_NOISE")
         mod_displace.texture = tempTex
         tempTex.distortion = 1.0
         tempTex.noise_scale = 0.85
@@ -980,7 +960,7 @@ class BYGEN_OT_organic_skin_add(bpy.types.Operator):
 
         # Random ID
         randID = random.randint(1,9999)
-        
+
         # Begin mesh generation procedure
         verts = [(0,0,1), (0,0,0)]
         mesh = bpy.data.meshes.new("mesh")
@@ -1000,22 +980,22 @@ class BYGEN_OT_organic_skin_add(bpy.types.Operator):
 
         sO = bpy.context.active_object
         bpy.ops.object.shade_smooth()
-        
+
         # Add Modifiers
         # Skin
         mod_skin = sO.modifiers.new("Skin", "SKIN")
-        
+
         # Remesh
         mod_remesh = sO.modifiers.new("Remesh", "REMESH")
         mod_remesh.mode = "SMOOTH"
         mod_remesh.octree_depth = 4
-        
+
         # Displace
         mod_displace = sO.modifiers.new("Displace", 'DISPLACE')
         mod_displace.strength = 0.6
-        tempTex = bpy.data.textures.new("ByGen_TexID_"+str(randID), 'MUSGRAVE')
+        tempTex = bpy.data.textures.new(f"ByGen_TexID_{randID}", 'MUSGRAVE')
         mod_displace.texture = tempTex
-        
+
         # Decimate
         mod_decimate = sO.modifiers.new('Decimate', 'DECIMATE')
         mod_decimate.decimate_type = 'DISSOLVE' # COLLAPSE, UNSUBDIV, DISSOLVE (PLANAR)
@@ -1023,20 +1003,20 @@ class BYGEN_OT_organic_skin_add(bpy.types.Operator):
         # mod_decimate2.angle_limit = 0.174533 
         mod_decimate.angle_limit = bytool.mod_decimate_angle #0.349066 recommended
         mod_decimate.use_dissolve_boundaries = True
-        
+
         # Smooth
         mod_smooth = sO.modifiers.new('Smooth', 'SMOOTH')
         mod_smooth.factor = 0.5
         mod_smooth.iterations = 15
-        
+
         # Triangulate
         if bytool.mod_oshell_allow_triangulate:
             mod_triangulate = sO.modifiers.new('Triangulate', 'TRIANGULATE')
-        
+
         # Wireframe
         mod_wireframe = sO.modifiers.new('Wireframe', 'WIREFRAME')
         mod_wireframe.thickness = 0.05
-        
+
         # Subsurf
         mod_subd = sO.modifiers.new("SubD", "SUBSURF")
         mod_subd.levels = 2
@@ -1087,7 +1067,7 @@ class BYGEN_OT_clay_blob_add(bpy.types.Operator):
         # Add Modifiers
         # Random ID
         randID = random.randint(1,9999)
-        
+
         # Subsurf
         mod = sO.modifiers.new("Subsurface", 'SUBSURF')
         mod.levels = 4
@@ -1097,14 +1077,14 @@ class BYGEN_OT_clay_blob_add(bpy.types.Operator):
         mod_displace = sO.modifiers.new("Displace", 'DISPLACE')
         # mod_displace.strength = -0.1
         mod_displace.strength = self.displace_str
-        tempTex = bpy.data.textures.new("ByGen_TexID_"+str(randID), 'VORONOI')
+        tempTex = bpy.data.textures.new(f"ByGen_TexID_{randID}", 'VORONOI')
         mod_displace.texture = tempTex
         tempTex = mod_displace.texture
         # tempTex.noise_intensity = 0.8
         tempTex.noise_intensity = self.noise_intensity
         # tempTex.noise_scale = 0.4
         tempTex.noise_scale = self.noise_scale
-        
+
         # Mirror
         if self.use_mirror:
             mod_mirror = sO.modifiers.new('Mirror', 'MIRROR')
@@ -1132,31 +1112,31 @@ class BYGEN_OT_point_cloud_add(bpy.types.Operator):
         mod = sO.modifiers.new("Subsurface", 'SUBSURF')
         mod.levels = 3
         mod.render_levels = 3
-        
+
         # Displace
         mod_displace = sO.modifiers.new("Displace", "DISPLACE")
         mod_displace.strength = 0.050
         mod_displace.texture_coords = "OBJECT"
-        tempTex = bpy.data.textures.new("ByGen_TexID_"+str(randID), 'MUSGRAVE')
+        tempTex = bpy.data.textures.new(f"ByGen_TexID_{randID}", 'MUSGRAVE')
         mod_displace.texture = tempTex
         tempTex = mod_displace.texture
-        
+
         # Edge Split
         mod_edge = sO.modifiers.new("Edge Split", "EDGE_SPLIT")
         mod_edge.use_edge_angle = True
         mod_edge.split_angle = 0
-        
+
         # Smooth
         mod_smooth = sO.modifiers.new("Smooth", "SMOOTH")
         mod_smooth.factor = 2.15
         mod_smooth.iterations = 1
-        
+
         # Bevel
         mod_bevel = sO.modifiers.new("Bevel", "BEVEL")
         mod_bevel.offset_type = "PERCENT"
         mod_bevel.width_pct = 100
         mod_bevel.affect = "VERTICES"
-        
+
         # Displace 2
         mod_displace2 = sO.modifiers.new("Displace", "DISPLACE")
         mod_displace2.strength = 0.1

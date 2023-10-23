@@ -62,8 +62,7 @@ def set_render_resolution(x, y):
     get_scene().render.resolution_y = y
 
 def get_render_resolution():
-    reslist = []
-    reslist.append(get_scene().render.resolution_x)
+    reslist = [get_scene().render.resolution_x]
     reslist.append(get_scene().render.resolution_y)
     return reslist
 
@@ -96,8 +95,7 @@ def set_render_pixel_aspect_ratio(x, y):
     get_scene().render.pixel_aspect_y = y
 
 def get_render_pixel_aspect_ratio():
-    aspectlist = []
-    aspectlist.append(get_scene().render.pixel_aspect_x)
+    aspectlist = [get_scene().render.pixel_aspect_x]
     aspectlist.append(get_scene().render.pixel_aspect_y)
     return aspectlist
 
@@ -160,7 +158,7 @@ def append(file, category, object):
         #fpath = file.replace('\\', '/') => Not viable for numeric folders.
         print("Please use forward slashes in path string.")
     else:
-        if isinstance(object, list) is False:
+        if not isinstance(object, list):
             object = [object]
         for o in object:
             filepath = file + "\\" + category + "\\" + o
@@ -212,7 +210,7 @@ def link(file, category, object):
         #fpath = file.replace('\\', '/') => Not viable for numeric folders.
         print("Please use forward slashes in path string.")
     else:
-        if isinstance(object, list) is False:
+        if not isinstance(object, list):
             object = [object]
         for o in object:
             filepath = file + "\\" + category + "\\" + o
@@ -268,7 +266,7 @@ def create_object(name = None, col = None):
     o = bpy.data.objects.new(name, m)
     col_ref = None
     # Assess col
-    if col == None:
+    if col is None:
         col_ref=bpy.context.view_layer.active_layer_collection.collection
     elif is_string(col):
         if col in bpy.data.collections:
@@ -285,9 +283,9 @@ def copy_object(tocopy, col = None):
     new_obj = None
     to_copy = get_object(tocopy)
     col_ref = None
-    
+
     # Assess col
-    if col == None:
+    if col is None:
         col_ref = get_active_collection()
     elif is_string(col):
         if collection_exists(col):
@@ -346,7 +344,7 @@ def selected_objects():
     return get_selected_objects()
 
 def select_all_objects(col = None):
-    if col == None:
+    if col is None:
         for co in bpy.context.scene.objects:
             co.select_set(True)
     else:
@@ -403,12 +401,11 @@ def get_object(ref):
     objref = None
     if ref is None:
         objref = ao()
+    elif is_string(ref):
+        if object_exists(ref):
+            objref = bpy.data.objects[ref]
     else:
-        if is_string(ref):
-            if object_exists(ref):
-                objref = bpy.data.objects[ref]
-        else:
-            objref = ref
+        objref = ref
     return objref
 
 def get_obj(ref):
@@ -418,20 +415,19 @@ def get_objects(ref = None):
     objref = []
     if ref is None:
         objref = so()
-    else:
-        if isinstance(ref, list):
-            if len(ref) > 0:
-                if isinstance(ref[0], bpy.types.Object):
-                    objref = ref
-                elif isinstance(ref[0], str):
-                    for ob_name in ref:
-                        if object_exists(ob_name):
-                            objref.append(bpy.data.objects[ob_name])
-        elif is_string(ref):
-            if object_exists(ref):
-                objref.append(bpy.data.objects[ref])
-        elif isinstance(ref, bpy.types.Object) :
-            objref.append(ref)
+    elif isinstance(ref, list):
+        if len(ref) > 0:
+            if isinstance(ref[0], bpy.types.Object):
+                objref = ref
+            elif isinstance(ref[0], str):
+                for ob_name in ref:
+                    if object_exists(ob_name):
+                        objref.append(bpy.data.objects[ob_name])
+    elif is_string(ref):
+        if object_exists(ref):
+            objref.append(bpy.data.objects[ref])
+    elif isinstance(ref, bpy.types.Object) :
+        objref.append(ref)
     return objref
 
 def get_objs(ref = None):
@@ -446,24 +442,14 @@ def get_median_point_of_objects(objs):
 
 def object_exists(ref):
     if is_string(ref):
-        if ref in bpy.data.objects:
-            return True
-        else:
-            return False
-    # redundant but for safety
+        return ref in bpy.data.objects
     else:
-        if ref.name in bpy.data.objects:
-            return True
-        else:
-            return False
+        return ref.name in bpy.data.objects
 
 def rename_object(obj, newname):
     objref = None
     # obj is string
-    if is_string(obj):
-        objref = get_object(obj)
-    else:
-        objref = obj
+    objref = get_object(obj) if is_string(obj) else obj
     # set name - only if string
     if is_string(newname):
         objref.name = newname
@@ -569,11 +555,7 @@ def invert_selection():
     bpy.ops.object.select_all(action='INVERT')
 
 def get_objects_with_modifiers():
-    objlist = []
-    for obj in bpy.data.objects:
-        if len(obj.modifiers) > 0:
-            objlist.append(obj)
-    return objlist
+    return [obj for obj in bpy.data.objects if len(obj.modifiers) > 0]
 
 def select_objects_with_modifiers():
     deselect_all_objects()
@@ -588,9 +570,8 @@ def get_objects_including(include, case_sensitive = True):
         if case_sensitive is True:
             if include in o.name:
                 objlist.append(o)
-        else:
-            if (include.lower() in o.name) or (include.upper() in o.name) or (include in o.name):
-                objlist.append(o)
+        elif (include.lower() in o.name) or (include.upper() in o.name) or (include in o.name):
+            objlist.append(o)
     return objlist
 
 def select_objects_including(include, case_sensitive = True):
@@ -598,9 +579,8 @@ def select_objects_including(include, case_sensitive = True):
         if case_sensitive is True:
             if include in o.name:
                 o.select_set(True)
-        else:
-            if (include.lower() in o.name) or (include.upper() in o.name) or (include in o.name):
-                o.select_set(True)
+        elif (include.lower() in o.name) or (include.upper() in o.name) or (include in o.name):
+            o.select_set(True)
 
 def get_objects_by_vertex(count = 0, mode="EQUAL"):
     cmode = mode.upper()
@@ -608,13 +588,13 @@ def get_objects_by_vertex(count = 0, mode="EQUAL"):
     for o in bpy.data.objects:
         if isinstance(o.data, bpy.types.Mesh):
             # o.data / len(o.data.vertices)
-            if cmode == "EQUAL" or cmode == "SAME":
+            if cmode in ["EQUAL", "SAME"]:
                 if len(o.data.vertices) == count:
                     objlist.append(o)
-            if cmode == "GREATER" or cmode == "MORE":
+            if cmode in ["GREATER", "MORE"]:
                 if len(o.data.vertices) > count:
                     objlist.append(o)
-            if cmode == "LESS" or cmode == "FEWER":
+            if cmode in ["LESS", "FEWER"]:
                 if len(o.data.vertices) < count:
                     objlist.append(o)
     return objlist
@@ -784,29 +764,24 @@ def add_constraint(type, ref = None, name = ""):
 def get_constraint(name, ref = None):
     objref = get_object(ref)
 
-    if name in objref.constraints:
-        return objref.constraints[name]
-    else:
-        return None
+    return objref.constraints[name] if name in objref.constraints else None
 
 def get_constraints_by_type(type,ref = None):
     objref = get_object(ref)
-    constraints = [con for con in objref.constraints if con.type == type]
-    return constraints
+    return [con for con in objref.constraints if con.type == type]
 
 def remove_constraint(name = None, ref = None):
     objref = get_object(ref)
 
-    if name is not None:
-        if is_string(name):
-            if name in objref.constraints:
-                mod = get_constraint(name,objref)
-                objref.constraints.remove(mod)
-        else:
-            objref.constraints.remove(name)
-    else:
+    if name is None:
         remove_constraint(objref.constraints[0])
-    
+
+    elif is_string(name):
+        if name in objref.constraints:
+            mod = get_constraint(name,objref)
+            objref.constraints.remove(mod)
+    else:
+        objref.constraints.remove(name)
     for area in bpy.context.screen.areas:
         if area.type == 'PROPERTIES':
             area.tag_redraw()
@@ -1187,9 +1162,7 @@ def rotate_around_axis(deg, axis = Vector(), ref = None, point = None):
     objs = make_obj_list(ref)
     pointref = None
     if point is None:
-        if get_scene().tool_settings.transform_pivot_point == 'MEDIAN_POINT':
-            pointref = get_median_point_of_objects(objs)
-        elif get_scene().tool_settings.transform_pivot_point == 'CURSOR':
+        if get_scene().tool_settings.transform_pivot_point == 'CURSOR':
             pointref = get_cursor_location()
         else:
             pointref = get_median_point_of_objects(objs)
@@ -1231,15 +1204,13 @@ def rotate_around_local_axis(deg, axis = Vector(), ref = None, point = None):
     objs = make_obj_list(ref)
     pointref = None
     if point is None:
-        if get_scene().tool_settings.transform_pivot_point == 'MEDIAN_POINT':
-            pointref = get_median_point_of_objects(objs)
-        elif get_scene().tool_settings.transform_pivot_point == 'CURSOR':
+        if get_scene().tool_settings.transform_pivot_point == 'CURSOR':
             pointref = get_cursor_location()
         else:
             pointref = get_median_point_of_objects(objs)
     else:
         pointref = point
-    
+
     axis.normalize()
     for obj in objs:
         tempaxis = axis.copy()
@@ -1273,9 +1244,7 @@ def scale_along_axis(val, axis, ref = None, point = None):
     objs = make_obj_list(ref)
     pointref = None
     if point is None:
-        if get_scene().tool_settings.transform_pivot_point == 'MEDIAN_POINT':
-            pointref = get_median_point_of_objects(objs)
-        elif get_scene().tool_settings.transform_pivot_point == 'CURSOR':
+        if get_scene().tool_settings.transform_pivot_point == 'CURSOR':
             pointref = get_cursor_location()
         else:
             pointref = get_median_point_of_objects(objs)
@@ -1291,7 +1260,7 @@ def scale_along_axis(val, axis, ref = None, point = None):
         obj.scale[0] *= temp[0]
         obj.scale[1] *= temp[1]
         obj.scale[2] *= temp[2]
-        
+
         tempaxis = axis.copy()
         tempaxis.rotate(obj.rotation_euler)
         fac = (obj.location - pointref).dot(tempaxis) * (val-1)
@@ -1328,9 +1297,7 @@ def scale_along_global_axis(val, axis, ref = None, point = None):
     objs = make_obj_list(ref)
     pointref = None
     if point is None:
-        if get_scene().tool_settings.transform_pivot_point == 'MEDIAN_POINT':
-            point = get_median_point_of_objects(objs)
-        elif get_scene().tool_settings.transform_pivot_point == 'CURSOR':
+        if get_scene().tool_settings.transform_pivot_point == 'CURSOR':
             point = get_cursor_location()
         else:
             point = get_median_point_of_objects(objs)
@@ -1364,15 +1331,13 @@ def scale_perpendicular_to_x(val, ref = None, point = None):
     objs = make_obj_list(ref)
     pointref = None
     if point is None:
-        if get_scene().tool_settings.transform_pivot_point == 'MEDIAN_POINT':
-            pointref = get_median_point_of_objects(objs)
-        elif get_scene().tool_settings.transform_pivot_point == 'CURSOR':
+        if get_scene().tool_settings.transform_pivot_point == 'CURSOR':
             pointref = get_cursor_location()
         else:
             pointref = get_median_point_of_objects(objs)
     else:
         pointref = point
-    
+
     for obj in objs:
         scale_vector(Vector((1.0, val, val)), obj)
         axis = (obj.location - pointref) * Vector((0.0, 1.0, 1.0))
@@ -1383,15 +1348,13 @@ def scale_perpendicular_to_y(val, ref = None, point = None):
     objs = make_obj_list(ref)
     pointref = None
     if point is None:
-        if get_scene().tool_settings.transform_pivot_point == 'MEDIAN_POINT':
-            pointref = get_median_point_of_objects(objs)
-        elif get_scene().tool_settings.transform_pivot_point == 'CURSOR':
+        if get_scene().tool_settings.transform_pivot_point == 'CURSOR':
             pointref = get_cursor_location()
         else:
             pointref = get_median_point_of_objects(objs)
     else:
         pointref = point
-    
+
     for obj in objs:
         scale_vector(Vector((val, 1.0, val)), obj)
         axis = (obj.location - pointref) * Vector((1.0, 0.0, 1.0))
@@ -1402,15 +1365,13 @@ def scale_perpendicular_to_z(val, ref = None, point = None):
     objs = make_obj_list(ref)
     pointref = None
     if point is None:
-        if get_scene().tool_settings.transform_pivot_point == 'MEDIAN_POINT':
-            pointref = get_median_point_of_objects(objs)
-        elif get_scene().tool_settings.transform_pivot_point == 'CURSOR':
+        if get_scene().tool_settings.transform_pivot_point == 'CURSOR':
             pointref = get_cursor_location()
         else:
             pointref = get_median_point_of_objects(objs)
     else:
         pointref = point
-    
+
     for obj in objs:
         scale_vector(Vector((val, val, 1.0)), obj)
         axis = (obj.location - pointref) * Vector((1.0, 1.0, 0.0))
@@ -1428,14 +1389,15 @@ def add_keyframe(path, property, frame = None):
     for i in range(len(path.animation_data.action.fcurves)):
         fcurve = path.animation_data.action.fcurves.find(property,index=i)
         if fcurve is not None:
-            for keyframe in fcurve.keyframe_points:
-                if keyframe.co[0] == frame:
-                    keyframes.append(keyframe)
-    
+            keyframes.extend(
+                keyframe
+                for keyframe in fcurve.keyframe_points
+                if keyframe.co[0] == frame
+            )
     # Updating Interface:
     for area in bpy.context.screen.areas:
         area.tag_redraw()
-        
+
     return keyframes if len(keyframes) > 1 else keyframes[0] 
     
 def remove_keyframe(keyframes):
@@ -1574,10 +1536,7 @@ def origin_to_centermass_volume(ref = None):
 def shade_object_smooth(ref = None):
     objref = None
     if ref is not None:
-        if is_string(ref):
-            objref = get_object(ref)
-        else:
-            objref = ref
+        objref = get_object(ref) if is_string(ref) else ref
     else:
         # nothing supplied, use so
         objref = selected_object()
@@ -1591,10 +1550,7 @@ def shade_smooth(ref = None):
 def shade_object_flat(ref = None):
     objref = None
     if ref is not None:
-        if is_string(ref):
-            objref = get_object(ref)
-        else:
-            objref = ref
+        objref = get_object(ref) if is_string(ref) else ref
     else:
         # nothing supplied, use so
         objref = selected_object()
@@ -1607,10 +1563,7 @@ def shade_flat(ref = None):
 
 def set_smooth_angle(ref, degrees = 60):
     objref = None
-    if is_string(ref):
-        objref = get_object(ref)
-    else:
-        objref = ref
+    objref = get_object(ref) if is_string(ref) else ref
     if objref.data.use_auto_smooth == False:
         objref.data.use_auto_smooth = True
     objref.data.auto_smooth_angle = radians(degrees)
@@ -1622,10 +1575,7 @@ def get_light(ref):
 
 def light_power(val = 0, ref = None):
     objlist = []
-    if ref is None:
-        objlist = so()
-    else:
-        objlist = [ref]
+    objlist = so() if ref is None else [ref]
     for o in objlist:
         o.data.energy = val
 
@@ -1634,10 +1584,7 @@ def light_intensity(val = 0, ref = None):
 
 def light_power_add(val = 0, ref = None):
     objlist = []
-    if ref is None:
-        objlist = so()
-    else:
-        objlist = [ref]
+    objlist = so() if ref is None else [ref]
     for o in objlist:
         o.data.energy += val
 
@@ -1646,10 +1593,7 @@ def light_intensity_add(val = 0, ref = None):
 
 def light_power_multiply(val = 0, ref = None):
     objlist = []
-    if ref is None:
-        objlist = so()
-    else:
-        objlist = [ref]
+    objlist = so() if ref is None else [ref]
     for o in objlist:
         o.data.energy *= val
 
@@ -1664,32 +1608,20 @@ def get_all_meshes():
     return bpy.data.meshes
 
 def get_vertices(ref):
-    if is_string(ref):
-        return get_object(ref).data.vertices
-    else:
-        return ref.data.vertices
+    return get_object(ref).data.vertices if is_string(ref) else ref.data.vertices
 
 def get_edges(ref):
-    if is_string(ref):
-        return get_object(ref).data.edges
-    else:
-        return ref.data.edges
+    return get_object(ref).data.edges if is_string(ref) else ref.data.edges
 
 def get_faces(ref):
     return get_polygons(ref)
 
 def get_polygons(ref):
-    if is_string(ref):
-        return get_object(ref).data.polygons
-    else:
-        return ref.data.polygons
+    return get_object(ref).data.polygons if is_string(ref) else ref.data.polygons
 
 def get_mesh_from_object(ref):
     objref = None
-    if is_string(ref):
-        objref = get_object(ref)
-    else:
-        objref = ref
+    objref = get_object(ref) if is_string(ref) else ref
     return objref.data
 
 def get_selected_vertices(ref = None):
@@ -1727,22 +1659,22 @@ def get_curve_points(ref = None):
     obj = get_object(ref)
     points = []
     for spline in obj.data.splines:
-        for point in (*spline.points, *spline.bezier_points):
-            points.append(point)
+        points.extend(iter((*spline.points, *spline.bezier_points)))
     return points
 
 def get_selected_curve_points(ref = None):
     obj = get_object(ref)
     points = []
     for spline in obj.data.splines:
-        if spline.type == "NURBS":
-            for point in spline.points:
-                if point.select:
-                    points.append(point)
-        if spline.type == "BEZIER":
-            for point in spline.points:
-                if point.select_control_point:
-                    points.append(point)
+        points.extend(
+            point
+            for point in spline.points
+            if spline.type == "BEZIER"
+            and point.select_control_point
+            or spline.type != "BEZIER"
+            and spline.type == "NURBS"
+            and point.select
+        )
     return points
 #endregion
 #region VERTEX GROUPS
@@ -1758,18 +1690,15 @@ def delete_vertex_group(ref, group_name):
 #region SHAPE KEYS
 def add_shape_key(name = None, ref = None):
     objref = get_object(ref)
-    if name:
-        sk = objref.shape_key_add(name = name)
-    else:
-        sk = objref.shape_key_add()
-    return sk
+    return objref.shape_key_add(name = name) if name else objref.shape_key_add()
 
 def get_shape_key(name_or_index = 0, ref = None):
     objref = get_object(ref)
-    sk = None
-    if(objref.data.shape_keys):
-        sk = objref.data.shape_keys.key_blocks[name_or_index]
-    return sk
+    return (
+        objref.data.shape_keys.key_blocks[name_or_index]
+        if objref.data.shape_keys
+        else None
+    )
 
 def get_all_shape_keys(ref = None):
     objref = get_object(ref)
@@ -1779,7 +1708,7 @@ def remove_shape_key(shape_key, ref = None):
     objref = get_object(ref)
     if isinstance(shape_key, bpy.types.ShapeKey):
         objref.shape_key_remove(shape_key)
-    elif isinstance(shape_key, str) or isinstance(shape_key, int):
+    elif isinstance(shape_key, (str, int)):
         sk_ref = get_shape_key(shape_key,objref)
         objref.shape_key_remove(sk_ref)
     else:
@@ -1815,11 +1744,7 @@ def create_collection(name):
 
 def delete_collection(col, delete_objects = False):
     colref = None
-    if is_string(col):
-            colref = get_collection(col)
-    else:
-        colref = col
-
+    colref = get_collection(col) if is_string(col) else col
     if delete_objects:
         deselect_all_objects()
         if len(colref.objects) > 0:
@@ -1839,10 +1764,7 @@ def delete_objects_in_collection(col):
     colref = None
     # col is a string
     if collection_exists(col):
-        if is_string(col):
-            colref = get_collection(col)
-        else:
-            colref = col
+        colref = get_collection(col) if is_string(col) else col
     # delete all objects in colref
     deselect_all_objects()
     for co in colref.objects:
@@ -1851,10 +1773,7 @@ def delete_objects_in_collection(col):
 
 def delete_hierarchy(col):
     colref = None
-    if is_string(col):
-        colref = get_collection(col)
-    else:
-        colref = col
+    colref = get_collection(col) if is_string(col) else col
     for co in colref.children:
         if isinstance(co, bpy.types.Collection):
             delete_hierarchy(co)
@@ -1864,11 +1783,8 @@ def delete_hierarchy(col):
 
 def duplicate_collection(col):
     colref = None
-    if is_string(col):
-        colref = get_collection(col)
-    else:
-        colref = col
-    new_name = "Copy of " + colref.name
+    colref = get_collection(col) if is_string(col) else col
+    new_name = f"Copy of {colref.name}"
     new_col = create_collection(new_name)
     to_copy = get_objects_from_collection(colref.name)
     for o in to_copy:
@@ -1876,22 +1792,15 @@ def duplicate_collection(col):
     return get_collection(new_name)
 
 def get_objects_from_collection(col):
-    if is_string(col):
-        return bpy.data.collections[col].objects
-    else:
-        return col.objects
+    return bpy.data.collections[col].objects if is_string(col) else col.objects
 
 def get_collection(ref = None):
     if ref is None:
         return bpy.context.view_layer.active_layer_collection.collection
+    if is_string(ref):
+        return bpy.data.collections[ref] if ref in bpy.data.collections else False
     else:
-        if is_string(ref):
-            if ref in bpy.data.collections:
-                return bpy.data.collections[ref]
-            else:
-                return False
-        else:
-            return ref
+        return ref
 
 def get_col(ref = None):
     return get_collection(ref)
@@ -1901,10 +1810,7 @@ def get_active_collection():
 
 def set_active_collection(ref):
     colref = None
-    if is_string(ref):
-        colref = get_collection(ref)
-    else:
-        colref = ref
+    colref = get_collection(ref) if is_string(ref) else ref
     hir = bpy.context.view_layer.layer_collection
     search_layer_collection_in_hierarchy_and_set_active(colref, hir)
 
@@ -1927,11 +1833,9 @@ def link_object_to_collection(ref, col):
     if is_string(col):
         objref = get_object(ref)
         bpy.data.collections[col].objects.link(objref)
-    else:
-        # Check for bad return argument
-        if isinstance(col, bool)!=True:
-            objref = get_object(ref)
-            col.objects.link(objref)
+    elif not isinstance(col, bool):
+        objref = get_object(ref)
+        col.objects.link(objref)
 
 def link_objects_to_collection(ref, col):
     objs = get_objects(ref)
@@ -1953,21 +1857,14 @@ def unlink_object_from_collection(ref, col):
 def unlink_objects_from_collection(ref, col):
     objs = get_objects(ref)
     colref = None
-    if is_string(col):
-        colref = get_collection(col)
-    else:
-        colref = col
+    colref = get_collection(col) if is_string(col) else col
     for o in objs:
         colref.objects.unlink(o)
 
 def move_object_to_collection(ref, col):
     objref = get_object(ref)
     colref = None
-    if is_string(col):
-        colref = get_collection(col)
-    else:
-        colref = col
-
+    colref = get_collection(col) if is_string(col) else col
     cols = objref.users_collection
     for c in cols:
         c.objects.unlink(objref)
@@ -1976,10 +1873,7 @@ def move_object_to_collection(ref, col):
 def move_objects_to_collection(ref, col):
     objs = get_objects(ref)
     colref = None
-    if is_string(col):
-        colref = get_collection(col)
-    else:
-        colref = col
+    colref = get_collection(col) if is_string(col) else col
     for o in objs:
         for c in o.users_collection:
             c.objects.unlink(o)
@@ -2011,10 +1905,7 @@ def material_exists(ref):
 
 def delete_material(ref):
     matref = None
-    if is_string(ref):
-        matref = get_material(ref)
-    else:
-        matref = ref
+    matref = get_material(ref) if is_string(ref) else ref
     bpy.data.materials.remove(matref)
 
 def get_material(matname = None):
@@ -2030,26 +1921,14 @@ def get_material(matname = None):
 def add_material_to_object(ref, mat):
     objref = None
     matref = None
-    if is_string(ref):
-        objref = get_object(ref)
-    else:
-        objref = ref
-    
-    if is_string(mat):
-        matref = get_material(mat)
-    else:
-        matref = mat
-
+    objref = get_object(ref) if is_string(ref) else ref
+    matref = get_material(mat) if is_string(mat) else mat
     if matref is not None:
         objref.data.materials.append(matref)
 
 def remove_material_from_object(ref, matname):
     objref = None
-    if is_string(ref):
-        objref = get_object(ref)
-    else:
-        objref = ref
-
+    objref = get_object(ref) if is_string(ref) else ref
     matindex = objref.data.materials.find(matname)
     if matname in objref.data.materials:
         objref.data.materials.pop(index=matindex)
@@ -2061,9 +1940,7 @@ def remove_materials(ref = None):
     objrefs = get_objects(ref)
     for o in objrefs:
         if len(o.material_slots) > 0:
-            names = []
-            for m in o.material_slots:
-                names.append(m.name)
+            names = [m.name for m in o.material_slots]
             for n in names:
                 remove_material_from_object(o,n)
                 
@@ -2097,19 +1974,13 @@ def get_material_from_object(ref):
 
 def get_materials_from_object(ref):
     objref = get_object(ref)
-    mat_list = []
     mats = objref.material_slots
-    for m in mats:
-        mat_list.append(m.material)
-    return mat_list
+    return [m.material for m in mats]
 
 def get_material_names_from_object(ref):
     objref = get_object(ref)
-    name_list = []
     mats = objref.material_slots
-    for m in mats:
-        name_list.append(m.name)
-    return name_list
+    return [m.name for m in mats]
 #endregion
 #region NODES
 def set_material_use_nodes(matref, value):
@@ -2123,17 +1994,15 @@ def get_material_nodes(ref):
     return mat.node_tree.nodes
 
 def get_node(nodes,ref):
-    if is_string(ref):
-        for n in nodes:
-            if n.name == ref:
-                return n
-    else:
+    if not is_string(ref):
         return ref
+    for n in nodes:
+        if n.name == ref:
+            return n
 
 def get_nodes(mat):
-    node_tree = mat.node_tree
-    if node_tree:
-      return node_tree.nodes 
+    if node_tree := mat.node_tree:
+        return node_tree.nodes 
 
 def get_node_tree(matref, make_tree = True):
     matref.use_nodes = make_tree
@@ -2166,20 +2035,16 @@ def create_link(point1 = None, point2 = None):
 
 def get_index_of_output(node, name):
     index = None
-    i = 0
-    while i < len(node.outputs):
+    for i in range(len(node.outputs)):
         if node.outputs[i].name == name:
             index = i
-        i += 1
     return index
 
 def get_index_of_input(node, name):
     index = None
-    i = 0
-    while i < len(node.inputs):
+    for i in range(len(node.inputs)):
         if node.inputs[i].name == name:
             index = i
-        i += 1
     return index
 
 # World Nodes
@@ -2196,11 +2061,10 @@ def create_texture(name="Texture", type='CLOUDS'):
         return bpy.data.textures.new(name, type.upper())
     
 def get_texture(ref):
-    if is_string(ref):
-        if ref in bpy.data.textures:
-            return bpy.data.textures[ref]
-    else:
+    if not is_string(ref):
         return ref
+    if ref in bpy.data.textures:
+        return bpy.data.textures[ref]
 
 def get_all_textures():
     return bpy.data.textures
@@ -2223,11 +2087,10 @@ def create_image(name = 'Image', width = 1024, height = 1024):
     return bpy.data.images.new(name = name, width = width, height = height)
 
 def get_image(ref):
-    if is_string(ref):
-        if ref in bpy.data.images:
-            return bpy.data.images[ref]
-    else:
+    if not is_string(ref):
         return ref
+    if ref in bpy.data.images:
+        return bpy.data.images[ref]
 
 def get_all_images():
     return bpy.data.images
@@ -2258,33 +2121,26 @@ def add_modifier(ref = None, name = "Modifier", id="SUBSURF"):
     for area in bpy.context.screen.areas:
         if area.type == 'PROPERTIES':
             area.tag_redraw()
-    
-    if len(new_mods)>1:
-        return new_mods
-    else:
-        return new_mods[0]
+
+    return new_mods if len(new_mods)>1 else new_mods[0]
 
 def get_modifier(ref, name):
     objref = get_object(ref)
 
     # we assume name is string
-    if name in objref.modifiers:
-        return objref.modifiers[name]
-    else:
-        return False
+    return objref.modifiers[name] if name in objref.modifiers else False
 
 def remove_modifier(ref = None, name = None):
     objref = get_object(ref)
-    if name is not None:
-        if is_string(name):
-            if name in objref.modifiers:
-                mod = get_modifier(objref,name)
-                objref.modifiers.remove(mod)
-        else:
-            objref.modifiers.remove(name)
-    else:
+    if name is None:
         objref.modifiers.remove(objref.modifiers[0])
-    
+
+    elif is_string(name):
+        if name in objref.modifiers:
+            mod = get_modifier(objref,name)
+            objref.modifiers.remove(mod)
+    else:
+        objref.modifiers.remove(name)
     for area in bpy.context.screen.areas:
         if area.type == 'PROPERTIES':
             area.tag_redraw()
@@ -2509,14 +2365,14 @@ def add_rigid_body_constraint_physics(ref=None):
 def set_fluid_type(fluidtype = None):
     ftype = bpy.context.object.modifiers["Fluid"].fluid_type
     if fluidtype is not None:
-        if fluidtype == "NONE":
-            ftype = "NONE"
         if fluidtype == "DOMAIN":
             ftype = "DOMAIN"
-        if fluidtype == "FLOW":
-            ftype = "FLOW"
-        if fluidtype == "EFFECTOR":
+        elif fluidtype == "EFFECTOR":
             ftype = "EFFECTOR"
+        elif fluidtype == "FLOW":
+            ftype = "FLOW"
+        elif fluidtype == "NONE":
+            ftype = "NONE"
     else:
         ftype = "NONE"
 
@@ -2535,17 +2391,17 @@ def fluid_effector_thickness_value(value):
 # Use effector, 1 = on 0 = off
 def fluid_effector_use_toggle(fbool):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].effector_settings.use_effector = h
 
 # Is Planar, 1 = on 0 = off
 def fluid_effector_is_planar(fbool):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].effector_settings.use_plane_init = h
 
 def fluid_effector_velocity(value):
@@ -2553,26 +2409,26 @@ def fluid_effector_velocity(value):
     bpy.context.object.modifiers["Fluid"].effector_settings.velocity_factor = intvalue
 
 def fluid_effector_guide_mode(value):
-    if value == 'MAXIMUM' or value == 'MAX':
+    if value in ['MAXIMUM', 'MAX']:
         bpy.context.object.modifiers["Fluid"].effector_settings.guide_mode = 'MAXIMUM'
-    if value == 'MINIMUM' or value == 'MIN':
+    if value in ['MINIMUM', 'MIN']:
         bpy.context.object.modifiers["Fluid"].effector_settings.guide_mode = 'MINIMUM'
-    if value == 'OVERRIDE' or value == 'OVER':
+    if value in ['OVERRIDE', 'OVER']:
         bpy.context.object.modifiers["Fluid"].effector_settings.guide_mode = 'OVERRIDE'
-    if value == 'AVERAGED' or value == 'MEAN':
+    if value in ['AVERAGED', 'MEAN']:
         bpy.context.object.modifiers["Fluid"].effector_settings.guide_mode = 'AVERAGED'
 
 # Type Flow Parameters
 def fluid_set_flow_type(flowtype = None):
     ftype = bpy.context.object.modifiers["Fluid"].flow_settings.flow_type
     if flowtype is not None:
-        if flowtype == "SMOKE":
-            ftype = "SMOKE"
         if flowtype == "FIRE":
             ftype = "FIRE"
-        if flowtype == "LIQUID" or flowtype == "FLUID":
+        elif flowtype in ["LIQUID", "FLUID"]:
             ftype = "LIQUID"
-        if flowtype == "SMOKE_FIRE" or flowtype == "FIRE_SMOKE" or flowtype == "BOTH":
+        elif flowtype == "SMOKE":
+            ftype = "SMOKE"
+        if flowtype in ["SMOKE_FIRE", "FIRE_SMOKE", "BOTH"]:
             ftype = "BOTH"
     else:
         ftype = "LIQUID"
@@ -2582,9 +2438,9 @@ def flow_set_behavior(value):
 
 def flow_use_flow_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].flow_settings.use_inflow = h
 
 def flow_source(value):
@@ -2620,9 +2476,9 @@ def flow_particle_system_select(value):
 
 def flow_particle_set_size_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].flow_settings.use_particle_size = h
 
 def flow_set_particle_size(value):
@@ -2632,9 +2488,9 @@ def flow_set_particle_size(value):
 # Intial Velocity
 def flow_initial_velocity_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].flow_settings.use_initial_velocity = h
 
 def flow_initial_velocity_value(value):
@@ -2647,7 +2503,7 @@ def fluid_set_domain_type(domaintype = None):
     if domaintype is not None:
         if domaintype == "GAS":
             dtype = "GAS"
-        if domaintype == "LIQUID":
+        elif domaintype == "LIQUID":
             dtype = "LIQUID"
     else:
         dtype = "LIQUID"
@@ -2676,17 +2532,17 @@ def fluid_domain_set_timesteps_min(value):
 # Border Collisions
 def fluid_domain_border_colisions(side,toggle):
     bool = int(toggle)
-    if side == 'top' or side == 'TOP':
+    if side in ['top', 'TOP']:
         bpy.context.object.modifiers["Fluid"].domain_settings.use_collision_border_top = bool
-    if side == 'back' or side == 'BACK':
+    if side in ['back', 'BACK']:
         bpy.context.object.modifiers["Fluid"].domain_settings.use_collision_border_back = bool
-    if side == 'front' or side == 'FRONT':
+    if side in ['front', 'FRONT']:
         bpy.context.object.modifiers["Fluid"].domain_settings.use_collision_border_front = bool
-    if side == 'right' or side == 'RIGHT':
+    if side in ['right', 'RIGHT']:
         bpy.context.object.modifiers["Fluid"].domain_settings.use_collision_border_right = bool
-    if side == 'left' or side == 'LEFT':
+    if side in ['left', 'LEFT']:
         bpy.context.object.modifiers["Fluid"].domain_settings.use_collision_border_left = bool
-    if side == 'bottom' or side == 'BOTTOM':
+    if side in ['bottom', 'BOTTOM']:
         bpy.context.object.modifiers["Fluid"].domain_settings.use_collision_border_bottom = bool
 
 # Caches      
@@ -2711,9 +2567,9 @@ def fluid_cache_type(value):
 
 def fluid_cache_continue_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.cache_resumable = h
 
 def fluid_cache_format(value):
@@ -2748,9 +2604,9 @@ def fluid_flow_effectorn(value):
 #Guides
 def fluid_domain_guides_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_guide = h
 
 def fluid_domain_guide_weight(value):
@@ -2846,9 +2702,9 @@ def fluid_view_slices_voxel(value):
 
 def fluid_view_slice_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_slice =h
 
 def fluid_view_slice_axis(value):
@@ -2860,9 +2716,9 @@ def fluid_view_slice_position(value):
 
 def fluid_view_grid_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_color_ramp = h
 
 def fluid_view_grid_scale(value):
@@ -2896,9 +2752,9 @@ def fluid_view_grid_stops_remove(value):
 
 def fluid_view_vector_dis_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_slice = h
 
 def fluid_view_vector_display_type(value):
@@ -2931,9 +2787,9 @@ def fluid_gas_buoyancy_vorticity(value):
 # Dissolve
 def fluid_gas_dissolve_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_dissolve_smoke = h
 
 def fluid_gas_dissolve_time(value):
@@ -2942,24 +2798,24 @@ def fluid_gas_dissolve_time(value):
 
 def fluid_gas_dissolve_slow_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_dissolve_smoke_log = h
 
 # Noise
 def fluid_gas_noise_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_noise = h
 
 def fluid_gas_noise_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.noise_scale = h
 
 def fluid_gas_noise_upres_factor(value):
@@ -3011,9 +2867,9 @@ def fluid_gas_fire_color_rgb(red,green,blue):
 # Fluid
 def fluid_fluid_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_flip_particles = h
 
 def fluid_fluid_flip_ratio(value):
@@ -3050,9 +2906,9 @@ def fluid_fluid_narrow_bandwidth(value):
 
 def fluid_fluid_frac_obs_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_fractions = h
 
 def fluid_fluid_obs_distance(value):
@@ -3065,9 +2921,9 @@ def fluid_fluid_obs_threshold(value):
 
 def fluid_fluid_diffusion_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_diffusion = h
 
 def fluid_fluid_diffusion_base(value):
@@ -3084,23 +2940,23 @@ def fluid_fluid_diffusion_surface(value):
 
 def fluid_fluid_particles_bubbles_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_bubble_particles = h
 
 def fluid_fluid_particles_foam_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_foam_particles = h
 
 def fluid_fluid_particles_spray_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_spray_particles = h
 
 def fluid_fluid_particles_combined_export(value):
@@ -3170,9 +3026,9 @@ def fluid_fluid_particles_particles_in_boundary(value):
 
 def fluid_fluid_mesh_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_mesh = h
 
 def fluid_fluid_mesh_upres(value):
@@ -3193,9 +3049,9 @@ def fluid_fluid_mesh_smooth_pos(value):
 
 def fluid_fluid_mesh_use_speed_vectors(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)    
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_speed_vectors = h
 
 def fluid_fluid_mesh_generator(value):
@@ -3215,9 +3071,9 @@ def fluid_fluid_mesh_concavity_lower(value):
 # Adpative Domain
 def fluid_domain_adapt_toggle(value):
     if value.upper() == 'FALSE':
-        h =bool(False)
+        h = False
     elif value.upper() == 'TRUE':
-        h =bool(True)
+        h = True
     bpy.context.object.modifiers["Fluid"].domain_settings.use_adaptive_domain = h
 
 def fluid_domain_adapt_res(value):
@@ -3321,18 +3177,13 @@ def use_fake_user(ref, use = True):
 #endregion
 #region DATA CHECKS
 def is_string(ref):
-    if isinstance(ref, str):
-        return True
-    else:
-        return False
+    return isinstance(ref, str)
 #endregion
 #region DATA CONSTRUCTORS
 def make_vector(data):
     return Vector((data[0],data[1],data[2]))
 def make_obj_list(ref):
-    if ref is None:
-        return [get_object(ref)]
-    return get_objects(ref)
+    return [get_object(ref)] if ref is None else get_objects(ref)
 #endregion
 #region MISC
 def clear_unwanted_data():
@@ -3374,11 +3225,7 @@ def debug_test():
 #endregion
 #region COMMON WORKFLOW FUNCTIONS
 def get_objects_containing(ref):
-    result = []
-    for o in bpy.data.objects:
-        if ref in o.name:
-            result.append(o)
-    return result
+    return [o for o in bpy.data.objects if ref in o.name]
 
 def select_objects_containing(ref):
     select_objects(get_objects_containing(ref))
@@ -3387,22 +3234,14 @@ def get_materials_containing(name, ref = None):
     results = []
     if ref is not None:
         mats = get_materials_from_object(ref)
-        for m in mats:
-            if name in m.name:
-                results.append(m)
+        results.extend(m for m in mats if name in m.name)
     else:
-        for m in bpy.data.materials:
-            if name in m.name:
-                results.append(m)
+        results.extend(m for m in bpy.data.materials if name in m.name)
     return results
 
 def get_particle_systems_containing(name, ref):
-    result = []
     ps = get_particle_systems(ref)
-    for p in ps:
-        if name in p.name:
-            result.append(p)
-    return result
+    return [p for p in ps if name in p.name]
 
 def organize_outliner():
     d = deselect_all_objects

@@ -13,12 +13,11 @@ from mathutils.bvhtree import BVHTree
 #endregion
 #region Functions
 # For measuring distance between vectors
-def measure (first,second):
+def measure(first,second):
     locx = second[0] - first[0]
     locy = second[1] - first[1]
     locz = second[2] - first[2]
-    distance = sqrt( (locx)**2 + (locy)**2 + (locz)**2  )
-    return distance
+    return sqrt( (locx)**2 + (locy)**2 + (locz)**2  )
 
 # For getting a random point within a radius (XY)
 # Thanks to nbogie

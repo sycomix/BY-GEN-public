@@ -81,7 +81,7 @@ class BYGEN_OT_BackupGenerationResultCollection(bpy.types.Operator):
         bytool = scene.by_tool
         randID = random.randint(1,9999)
 
-        newcolname = "Generation_Output_"+str(randID)
+        newcolname = f"Generation_Output_{randID}"
         newcol = bpy.data.collections.new(newcolname)
         bpy.context.scene.collection.children.link(newcol)
         generation_result = bpy.data.collections["Generation Result"]

@@ -15,10 +15,7 @@ def choose_from_list(choices):
 
 # Return a list containing a single value from each list
 def choose_from_each_list(choices_list):
-    return_list = []
-    for l in choices_list:
-        return_list.append(l[random.randint(0,len(l)-1)])
-    return return_list
+    return [l[random.randint(0,len(l)-1)] for l in choices_list]
 
 # Returns a reference to an object in the given collection
 def choose_object_from_collection(collection_name):
